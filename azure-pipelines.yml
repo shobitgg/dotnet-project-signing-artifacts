@@ -1,34 +1,122 @@
-# ASP.NET
-# Build and test ASP.NET projects.
-# Add steps that publish symbols, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/apps/aspnet/build-aspnet-4
+# # ASP.NET
+# # Build and test ASP.NET projects.
+# # Add steps that publish symbols, save build artifacts, deploy, and more:
+# # https://docs.microsoft.com/azure/devops/pipelines/apps/aspnet/build-aspnet-4
+
+# trigger:
+# - master
+
+# pool:
+#   vmImage: 'windows-latest'
+
+# variables:
+#   solution: '**/*.sln'
+#   buildPlatform: 'Any CPU'
+#   buildConfiguration: 'Release'
+
+# steps:
+# - task: NuGetToolInstaller@1
+
+# - task: NuGetCommand@2
+#   inputs:
+#     restoreSolution: '$(solution)'
 
 trigger:
-- master
+- '*'
 
-pool:
-  vmImage: 'windows-latest'
 
 variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
 
-steps:
-- task: NuGetToolInstaller@1
+  buildConfiguration: ‘Release’
 
-- task: NuGetCommand@2
-  inputs:
-    restoreSolution: '$(solution)'
 
-- task: VSBuild@1
-  inputs:
-    solution: '$(solution)'
-    msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactStagingDirectory)"'
-    platform: '$(buildPlatform)'
-    configuration: '$(buildConfiguration)'
 
-- task: VSTest@2
-  inputs:
-    platform: '$(buildPlatform)'
-    configuration: '$(buildConfiguration)'
+stages:
+
+  - stage: build
+    displayName: Build
+    jobs:
+      - job:
+        pool:
+          vmImage: windows-latest
+        steps:
+        # - task: UseDotNet@2
+        #   displayName: ‘Install .NET Core SDK’
+        #   inputs:
+        #     packageType: 'sdk'
+        #     version: '6.x'
+        #     includePreviewVersions: true
+        #     performMultiLevelLookup: true
+        - task: NuGetToolInstaller@1
+        - task: NuGetCommand@2
+          inputs:
+            restoreSolution: '$(solution)'
+        - task: DotNetCoreCLI@1
+          displayName: "Restore"
+          inputs:
+            command: 'restore'
+          
+# #           Build dotnet project with Release configuration
+#         - task: DotNetCoreCLI@1
+#           displayName: Build
+#           inputs:
+#             command: 'build'
+#             projects: 'HelloWorld.csproj'
+#             arguments: '‘–configuration $(buildConfiguration)’'
+        - task: VSBuild@1
+          inputs:
+            solution: '$(solution)'
+            msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\WebApp.zip" /p:DeployIisAppPath="Default Web Site"'
+            platform: '$(buildPlatform)'
+            configuration: '$(buildConfiguration)'
+    #           Create directories for signed artifacts    
+        - powershell: New-Item -ItemType Directory -Path ./artifacts
+          displayName: ‘Created directories for artifacts’
+ #           Create directories for signed packages
+        - powershell: New-Item -ItemType Directory -Path ./packages
+          displayName: ‘Created directories for packages’ 
+#           Copy artifact to be signing path
+        - powershell: Copy-Item ./bin/Release/netcoreapp3.1/HelloWorld-0.0.1.dll -Destination ./packages/HelloWorld.dll
+          displayName: “Copy built artifacts to packages directory”
+#          Save artifact in order to use signing job
+        - task: PublishBuildArtifacts@1
+          displayName: ‘Save to be signed artifact for downloading’
+          inputs:
+            pathtoPublish: ./packages/HelloWorld.dll
+            artifactName: HelloWorld.dll     
+  - stage: Sign
+    displayName: Sign
+    # condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/master'))
+    jobs:
+    - job:
+      pool:
+        vmImage: ubuntu-latest
+      
+      
+      steps:               
+        - script: mkdir -p ./artifacts && mkdir -p ./packages
+          displayName: “Created directories for artifacts and packages”
+
+
+        - task: DownloadPipelineArtifact@2
+          inputs:
+            artifact: 'HelloWorld.dll'
+            downloadPath: ./packages
+        - task: DockerInstaller@0
+          inputs:
+            dockerVersion: '17.09.0-ce'
+
+    
+        - script: docker pull ghcr.io/sslcom/codesigner:latest
+          displayName: ‘Docker Pull CodeSigner Docker Image’
+        - script: docker run -i –rm –dns 8.8.8.8 –network host –volume $PWD/packages:/codesign/examples –volume $PWD/artifacts:/codesign/output -e USERNAME=$(USERNAME) -e PASSWORD=$(PASSWORD) -e CREDENTIAL_ID=$(CREDENTIAL_ID) -e TOTP_SECRET=$(TOTP_SECRET) -e ENVIRONMENT_NAME=$(ENVIRONMENT_NAME) ghcr.io/sslcom/codesigner:latest sign -input_file_path=/codesign/examples/HelloWorld.dll -output_dir_path=/codesign/output
+          displayName: ‘Sign artifact with CodeSigner docker image’
+
+        
+        - task: PublishBuildArtifacts@1
+          inputs:
+            PathtoPublish: './artifacts/HelloWorld.dll'
+            ArtifactName: 'HelloWorld.dll'
+            
+              
+
