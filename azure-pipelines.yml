@@ -48,17 +48,17 @@ stages:
           inputs:
             versionSpec: '4.4.1'
 
-        - task: NuGetCommand@2
-          inputs:
-            command: 'restore'
-            restoreSolution: '$(solution)'
-            feedsToUse: 'select'
+        # - task: NuGetCommand@2
+        #   inputs:
+        #     command: 'restore'
+        #     restoreSolution: '$(solution)'
+        #     feedsToUse: 'select'
 
-        - task: VSBuild@1
-          inputs:
-            solution: '$(solution)'
-            platform: '$(buildPlatform)'
-            configuration: '$(buildConfiguration)'
+        # - task: VSBuild@1
+        #   inputs:
+        #     solution: '$(solution)'
+        #     platform: '$(buildPlatform)'
+        #     configuration: '$(buildConfiguration)'
     #           Create directories for signed artifacts    
         # - task: Docker@2
         #   inputs:
@@ -104,9 +104,9 @@ stages:
           displayName: "Update Azure SignTool"
       
                    
-        - script: docker pull nginx:latest
+        - script: docker pull bitnami/nginx
           displayName: ‘Docker Pull CodeSigner Docker Image’
-        - script:  azuresigntool sign -kvu "$(SigningVaultURL)" -kvi "$(CONN1242-app-client-id)" -kvt "$(CONN1242-app-tenant-id)" -kvs "$(CONN1242-client-secret-value-password)" -kvc "$(SigningCertName)" -v  nginx:latest
+        - script:  azuresigntool sign -kvu "$(SigningVaultURL)" -kvi "$(CONN1242-app-client-id)" -kvt "$(CONN1242-app-tenant-id)" -kvs "$(CONN1242-client-secret-value-password)" -kvc "$(SigningCertName)" -v  bitnami/nginx
           displayName: ‘Sign artifact with CodeSigner docker image’
 
         
