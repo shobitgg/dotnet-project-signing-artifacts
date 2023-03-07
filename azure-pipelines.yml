@@ -60,12 +60,12 @@ stages:
             platform: '$(buildPlatform)'
             configuration: '$(buildConfiguration)'
     #           Create directories for signed artifacts    
-        - task: Docker@2
-          inputs:
-            containerRegistry: 'demoappContainerRegistery'
-            repository: 'signningartifact'
-            command: 'buildAndPush'
-            Dockerfile: '**/Dockerfile'
+        # - task: Docker@2
+        #   inputs:
+        #     containerRegistry: 'demoappContainerRegistery'
+        #     repository: 'signningartifact'
+        #     command: 'buildAndPush'
+        #     Dockerfile: '**/Dockerfile'
 
   - stage: Sign
     displayName: Sign
@@ -83,9 +83,9 @@ stages:
             dockerVersion: '17.09.0-ce'
 
     
-        - script: docker pull ghcr.io/sslcom/codesigner:latest
+        - script: docker pull nginx:latest
           displayName: ‘Docker Pull CodeSigner Docker Image’
-        - script:  azuresigntool sign -kvu "$(SigningVaultURL)" -kvi "$(CONN1242-app-client-id)" -kvt "$(CONN1242-app-tenant-id)" -kvs "$(CONN1242-client-secret-value-password)" -kvc "$(SigningCertName)" -v  demoappcontainerregistery.azurecr.io/signningartifact:latest
+        - script:  azuresigntool sign -kvu "$(SigningVaultURL)" -kvi "$(CONN1242-app-client-id)" -kvt "$(CONN1242-app-tenant-id)" -kvs "$(CONN1242-client-secret-value-password)" -kvc "$(SigningCertName)" -v  nginx:latest
           displayName: ‘Sign artifact with CodeSigner docker image’
 
         
