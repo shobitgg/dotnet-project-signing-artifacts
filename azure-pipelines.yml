@@ -88,7 +88,22 @@ stages:
             KeyVaultName: 'petstore-vault'
             SecretsFilter: '*'
             RunAsPreJob: true
-    
+
+        - task: DotNetCoreCLI@2
+          inputs:
+            command: custom
+            custom: tool
+            arguments: install --global AzureSignTool
+          displayName: "Install Azure SignTool"
+          
+        - task: DotNetCoreCLI@2
+          inputs:
+            command: custom
+            custom: tool
+            arguments: update --global AzureSignTool
+          displayName: "Update Azure SignTool"
+      
+                   
         - script: docker pull nginx:latest
           displayName: ‘Docker Pull CodeSigner Docker Image’
         - script:  azuresigntool sign -kvu "$(SigningVaultURL)" -kvi "$(CONN1242-app-client-id)" -kvt "$(CONN1242-app-tenant-id)" -kvs "$(CONN1242-client-secret-value-password)" -kvc "$(SigningCertName)" -v  nginx:latest
