@@ -25,7 +25,7 @@ trigger:
 - '*'
 
 variables:
-  solution: '**/*.sln'
+  solution: '**\*.sln'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
 
@@ -43,49 +43,36 @@ stages:
         pool:
           vmImage: windows-latest
         steps:
-        # - task: UseDotNet@2
-        #   displayName: ‘Install .NET Core SDK’
-        #   inputs:
-        #     packageType: 'sdk'
-        #     version: '6.x'
-        #     includePreviewVersions: true
-        #     performMultiLevelLookup: true
+
         - task: NuGetToolInstaller@1
+          inputs:
+            versionSpec: '4.4.1'
+
         - task: NuGetCommand@2
           inputs:
-            restoreSolution: '$(solution)'
-        - task: DotNetCoreCLI@1
-          displayName: "Restore"
-          inputs:
             command: 'restore'
-          
-# #           Build dotnet project with Release configuration
-#         - task: DotNetCoreCLI@1
-#           displayName: Build
-#           inputs:
-#             command: 'build'
-#             projects: 'HelloWorld.csproj'
-#             arguments: '‘–configuration $(buildConfiguration)’'
+            restoreSolution: '$(solution)'
+            feedsToUse: 'select'
+
         - task: VSBuild@1
           inputs:
             solution: '$(solution)'
-            msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\WebApp.zip" /p:DeployIisAppPath="Default Web Site"'
             platform: '$(buildPlatform)'
             configuration: '$(buildConfiguration)'
     #           Create directories for signed artifacts    
-        - powershell: New-Item -ItemType Directory -Path ./artifacts
+        - powershell: New-Item -ItemType Directory -Path .\artifacts
           displayName: ‘Created directories for artifacts’
  #           Create directories for signed packages
-        - powershell: New-Item -ItemType Directory -Path ./packages
+        - powershell: New-Item -ItemType Directory -Path .\packages
           displayName: ‘Created directories for packages’ 
 #           Copy artifact to be signing path
-        - powershell: Copy-Item ./bin/Release/netcoreapp3.1/HelloWorld-0.0.1.dll -Destination ./packages/HelloWorld.dll
+        - powershell: Copy-Item .\bin\Release\netcoreapp2.0\hello-world-api.dll -Destination .\packages\HelloWorld.dll
           displayName: “Copy built artifacts to packages directory”
 #          Save artifact in order to use signing job
         - task: PublishBuildArtifacts@1
           displayName: ‘Save to be signed artifact for downloading’
           inputs:
-            pathtoPublish: ./packages/HelloWorld.dll
+            pathtoPublish: .\packages\HelloWorld.dll
             artifactName: HelloWorld.dll     
   - stage: Sign
     displayName: Sign
