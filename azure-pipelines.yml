@@ -78,10 +78,16 @@ stages:
       
       steps:               
 
+
         - task: DockerInstaller@0
           inputs:
             dockerVersion: '17.09.0-ce'
-
+        - task: AzureKeyVault@2
+          inputs:
+            azureSubscription: 'Kyndryl course Modernops'
+            KeyVaultName: 'petstore-vault'
+            SecretsFilter: '*'
+            RunAsPreJob: true
     
         - script: docker pull nginx:latest
           displayName: ‘Docker Pull CodeSigner Docker Image’
