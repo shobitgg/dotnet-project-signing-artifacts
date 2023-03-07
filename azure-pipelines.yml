@@ -66,7 +66,7 @@ stages:
         - powershell: New-Item -ItemType Directory -Path .\packages
           displayName: ‘Created directories for packages’ 
 #           Copy artifact to be signing path
-        - powershell: Copy-Item .\bin\Release\netcoreapp2.0\hello-world-api.dll -Destination .\packages\HelloWorld.dll
+        - powershell: Copy-Item .\hello-world-api\bin\Release\netcoreapp2.0\hello-world-api.dll -Destination .\packages\HelloWorld.dll
           displayName: “Copy built artifacts to packages directory”
 #          Save artifact in order to use signing job
         - task: PublishBuildArtifacts@1
@@ -84,7 +84,7 @@ stages:
       
       
       steps:               
-        - script: mkdir -p ./artifacts && mkdir -p ./packages
+        - script: mkdir -p .\artifacts && mkdir -p .\packages
           displayName: “Created directories for artifacts and packages”
 
 
