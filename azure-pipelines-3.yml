@@ -44,3 +44,4 @@ steps:
     version: '1.20.2'
 - script: go install github.com/sigstore/cosign/v2/cmd/cosign@latest
 - script: cosign generate-key-pair -kms "azurekms://petstore-vault.vault.azure.net/cosignkey"
+- script: az keyvault key show --name cosignkey --vault-name petstore-vault
