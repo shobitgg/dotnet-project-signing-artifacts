@@ -7,7 +7,7 @@ trigger:
 - master
 
 pool:
-  vmImage: 'windows-latest'
+  vmImage: 'macos-latest'
 
 variables:
   solution: '**/*.sln'
@@ -42,6 +42,6 @@ steps:
 - task: GoTool@0
   inputs:
     version: '1.20.2'
-- script: go install github.com/sigstore/cosign/v2/cmd/cosign@latest
+- script: brew install cosign
 - script: cosign generate-key-pair -kms "azurekms://petstore-vault.vault.azure.net/cosignkey"
 - script: az keyvault key show --name cosignkey --vault-name petstore-vault
