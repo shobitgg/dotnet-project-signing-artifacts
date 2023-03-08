@@ -13,6 +13,9 @@ variables:
   solution: '**/*.sln'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
+  AZURE_CLIENT_ID: ''
+  AZURE_CLIENT_SECRET: ''
+
 
 steps:
 # - task: NuGetToolInstaller@1
@@ -40,3 +43,4 @@ steps:
   inputs:
     version: '1.20.2'
 - script: go install github.com/sigstore/cosign/v2/cmd/cosign@latest
+- script: cosign generate-key-pair -kms "azurekms://petstore-vault.vault.azure.net/cosignkey"
