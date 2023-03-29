@@ -4,44 +4,82 @@
 # https://docs.microsoft.com/azure/devops/pipelines/apps/aspnet/build-aspnet-4
 
 trigger:
-- master
+- none
 
 pool:
-  vmImage: 'macos-latest'
+  vmImage: 'windows-latest'
 
 variables:
   solution: '**/*.sln'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
-  AZURE_CLIENT_ID: ''
-  AZURE_CLIENT_SECRET: ''
-
 
 steps:
-# - task: NuGetToolInstaller@1
+- task: AzureKeyVault@2
+  inputs:
+    azureSubscription: 'Kyndryl course Modernops'
+    KeyVaultName: 'petstore-vault'
+    SecretsFilter: '*'
+    RunAsPreJob: true
 
-# - task: NuGetCommand@2
-#   inputs:
-#     restoreSolution: '$(solution)'
+- task: NuGetToolInstaller@1
+  inputs:
+    versionSpec: '4.4.1'
 
-# - task: VSBuild@1
-#   inputs:
-#     solution: '$(solution)'
-#     msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactStagingDirectory)"'
-#     platform: '$(buildPlatform)'
-#     configuration: '$(buildConfiguration)'
-
-# - task: VSTest@2
-#   inputs:
-#     platform: '$(buildPlatform)'
-#     configuration: '$(buildConfiguration)'
-
+- task: NuGetCommand@2
+  inputs:
+    command: 'restore'
+    restoreSolution: '$(solution)'
+    feedsToUse: 'select'
 
 
 
 - task: GoTool@0
   inputs:
-    version: '1.20.2'
-- script: brew install cosign
-- script: cosign generate-key-pair -kms "azurekms://petstore-vault.vault.azure.net/cosignkey"
-- script: az keyvault key show --name cosignkey --vault-name petstore-vault
+    version: '1.10'
+
+- task: CmdLine@2
+  inputs:
+    script: 'go install github.com/sigstore/cosign/v2/cmd/cosign@latest'
+- task: CmdLine@2
+  displayName: Generate Key Pairs
+  inputs:
+    script: |
+      export AZURE_CLIENT_ID=$KVADMIN_CLIENTID
+      export AZURE_CLIENT_SECRET=$KVADMIN_SECRET
+
+      cosign generate-key-pair -kms "azurekms://$KVNAME.vault.azure.net/cosignkey"
+- task: CmdLine@2
+  displayName: Verify Key Generation
+  inputs:
+    script: |
+      az keyvault key show --name cosignkey --vault-name $KVNAME
+- task: Docker@2
+  inputs:
+    containerRegistry: 'demoappContainerRegistery'
+    repository: '<IMAGE_NAME>'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+- task: CmdLine@2
+  inputs:
+    script: |
+      export AZURE_CLIENT_ID=$KVSIGNER_CLIENTID
+      export AZURE_CLIENT_SECRET=$KVSIGNER_SECRET
+      cosign sign -key "azurekms://$KVNAME.vault.azure.net/cosignkey" $ACRHOST/<IMAGE_NAME>:v1
+- task: CmdLine@2
+  inputs:
+    script: |
+      export AZURE_CLIENT_ID=$KVREADER_CLIENTID
+      export AZURE_CLIENT_SECRET=$KVREADER_SECRET
+      cosign verify -key "azurekms://$KVNAME.vault.azure.net/cosignkey" $ACRHOST/IMAGE_NAME:v1
+- task: CopyFiles@2
+  inputs:
+    SourceFolder: '$(System.DefaultWorkingDirectory)'
+    Contents: '**'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
